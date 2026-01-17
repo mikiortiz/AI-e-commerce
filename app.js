@@ -1,20 +1,57 @@
-var express = require('express');
-var path = require('path');
-var cookieParser = require('cookie-parser');
-var logger = require('morgan');
+const express = require("express");
+const path = require("path");
+const logger = require("morgan");
+const cors = require("cors");
 
-var indexRouter = require('./routes/index');
-var usersRouter = require('./routes/users');
+require("dotenv").config();
 
-var app = express();
+// 🔌 DB (solo lectura)
+require("./config/db")();
 
-app.use(logger('dev'));
-app.use(express.json());
+const app = express();
+
+// ===============================
+// MIDDLEWARES
+// ===============================
+app.use(logger("dev"));
+app.use(express.json({ limit: "15mb" }));
 app.use(express.urlencoded({ extended: false }));
-app.use(cookieParser());
-app.use(express.static(path.join(__dirname, 'public')));
 
-app.use('/', indexRouter);
-app.use('/users', usersRouter);
+// ===============================
+// CORS
+// ===============================
+const corsOptions = {
+  origin: "*", // después lo restringimos si querés
+  allowedHeaders: ["Content-Type", "Authorization"],
+};
+
+app.use(cors(corsOptions));
+
+// ===============================
+// ROUTES
+// ===============================
+app.use("/api/ai", require("./routes/ai.routes"));
+
+// ===============================
+// HEALTH CHECK
+// ===============================
+app.get("/", (req, res) => {
+  res.json({ status: "🧠 AI Service running" });
+});
+
+// ===============================
+// 404
+// ===============================
+app.use((req, res) => {
+  res.status(404).json({ error: "Endpoint no encontrado" });
+});
+
+// ===============================
+// ERROR HANDLER
+// ===============================
+app.use((err, req, res, next) => {
+  console.error(err);
+  res.status(500).json({ error: "Error interno del servidor" });
+});
 
 module.exports = app;
